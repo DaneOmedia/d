@@ -67,28 +67,26 @@ app.post('/webhook', async (req, res) => {
 
 // ── Claude email generator ────────────────────────────────────────────────────
 
-async function generateEmail({ firstName, companyName, industry }) {
-  const companyContext = companyName ? `at ${companyName}` : '';
-  const industryContext = industry && industry !== 'your industry'
-    ? `in the ${industry} space`
-    : '';
+async function generateEmail({ firstName, companyName }) {
+  const prompt = `You are writing a short personal message to ${firstName}, a realtor${companyName ? ` at ${companyName}` : ''}.
 
-  const prompt = `Write a short cold outreach email to ${firstName}${companyContext ? ` at ${companyName}` : ''} from DaneOmedia.
+Write exactly 4 sentences. No more.
 
-DaneOmedia helps realtors get more listings with professional photo and video content.
+Here is what each sentence must do:
+Sentence 1: Say hi to ${firstName} in a warm casual way, like you already know them a little.
+Sentence 2: Mention that you work with realtors and that professional photos and video help them win more listings.
+Sentence 3: Say something brief and genuine about why good visuals matter when a seller is choosing an agent.
+Sentence 4: Ask if they have 15 minutes this week to chat.
 
-Tone and style rules:
-Write like a real person texting a colleague they kind of know already. Casual and warm. Short sentences. Simple everyday words. No corporate or agency language at all.
+Hard rules. Follow every single one:
+Do not use any dashes or hyphens.
+Do not use bullet points or lists.
+Do not use these words or anything close to them: outbound, pipeline, deliverability, leverage, solutions, agency, cold, strategy, tighten, deliver.
+Do not mention emails, campaigns, or marketing.
+Write like a real person sending a text to someone they kind of know. Warm and casual. Short simple words.
+Do not include a greeting line, subject line, sign off, or your name. Just the 4 sentences.
 
-Formatting rules:
-No dashes or hyphens anywhere. No bullet points or lists. No subject line. Just the email body.
-
-Do not use any of these words: tighten, outbound, leverage, deliver, solutions.
-
-Content rules:
-Use ${firstName}'s name naturally once. Mention that DaneOmedia helps realtors get more listings with professional photo and video content. End with a soft question asking if they have 15 minutes this week. Do not include a sign-off or your name.
-
-Write only the email body now.`;
+Write the 4 sentences now.`;
 
   const message = await getAnthropicClient().messages.create({
     model: 'claude-opus-4-6',
