@@ -73,15 +73,20 @@ async function generateEmail({ firstName, companyName, industry }) {
     ? `in the ${industry} space`
     : '';
 
-  const prompt = `Write a cold outreach email from a marketing agency to ${firstName} ${companyContext} ${industryContext}.
+  const prompt = `Write a short cold outreach email to ${firstName}${companyContext ? ` at ${companyName}` : ''} from DaneOmedia.
 
-Rules:
-- 4-5 lines maximum
-- Sound human and conversational — no corporate fluff
-- Reference their company name naturally if provided
-- End with a soft call to action asking for a 15 minute call
-- Do NOT include a subject line, salutation, or sign-off — just the body copy
-- Do NOT use placeholders like [Your Name] or [Agency Name]
+DaneOmedia helps realtors get more listings with professional photo and video content.
+
+Tone and style rules:
+Write like a real person texting a colleague they kind of know already. Casual and warm. Short sentences. Simple everyday words. No corporate or agency language at all.
+
+Formatting rules:
+No dashes or hyphens anywhere. No bullet points or lists. No subject line. Just the email body.
+
+Do not use any of these words: tighten, outbound, leverage, deliver, solutions.
+
+Content rules:
+Use ${firstName}'s name naturally once. Mention that DaneOmedia helps realtors get more listings with professional photo and video content. End with a soft question asking if they have 15 minutes this week. Do not include a sign-off or your name.
 
 Write only the email body now.`;
 
