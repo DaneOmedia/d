@@ -68,30 +68,29 @@ app.post('/webhook', async (req, res) => {
 // ── Claude email generator ────────────────────────────────────────────────────
 
 async function generateEmail({ firstName, companyName }) {
-  const prompt = `You are writing a short personal message to ${firstName}, a realtor${companyName ? ` at ${companyName}` : ''}.
-
-Write exactly 4 sentences. No more.
-
-Here is what each sentence must do:
-Sentence 1: Say hi to ${firstName} in a warm casual way, like you already know them a little.
-Sentence 2: Mention that you work with realtors and that professional photos and video help them win more listings.
-Sentence 3: Say something brief and genuine about why good visuals matter when a seller is choosing an agent.
-Sentence 4: Ask if they have 15 minutes this week to chat.
-
-Hard rules. Follow every single one:
-Do not use any dashes or hyphens.
-Do not use bullet points or lists.
-Do not use these words or anything close to them: outbound, pipeline, deliverability, leverage, solutions, agency, cold, strategy, tighten, deliver.
-Do not mention emails, campaigns, or marketing.
-Write like a real person sending a text to someone they kind of know. Warm and casual. Short simple words.
-Do not include a greeting line, subject line, sign off, or your name. Just the 4 sentences.
-
-Write the 4 sentences now.`;
-
   const message = await getAnthropicClient().messages.create({
     model: 'claude-opus-4-6',
     max_tokens: 300,
-    messages: [{ role: 'user', content: prompt }],
+    system: `You are a real person who works at DaneOmedia, a real estate media company. DaneOmedia shoots professional photos and videos for realtors to help them win more listings. You are texting a realtor you kind of know already. You write like a normal human, not a marketer.
+
+STRICT RULES YOU MUST FOLLOW:
+- Write exactly 4 short sentences. No more, no less.
+- Never use dashes or hyphens anywhere.
+- Never use bullet points or lists.
+- Never use these words: cold, outbound, pipeline, deliverability, leverage, solutions, agency, strategy, tighten, deliver, campaigns, marketing, outreach.
+- Do not include a greeting, subject line, sign off, or your name.
+- Just write the 4 sentences and nothing else.`,
+    messages: [
+      {
+        role: 'user',
+        content: `Write 4 sentences to ${firstName}${companyName ? ` at ${companyName}` : ''}, a realtor.
+
+Sentence 1: Say hi to ${firstName} in a warm casual way.
+Sentence 2: Say that you work with realtors and that good photos and video help them get more listings.
+Sentence 3: Say one simple genuine thing about why visuals matter when a seller picks an agent.
+Sentence 4: Ask if they have 15 minutes this week to chat.`,
+      },
+    ],
   });
 
   return message.content[0].text.trim();
