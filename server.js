@@ -9,9 +9,16 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+let anthropic = null;
+function getAnthropicClient() {
+  if (!anthropic) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      throw new Error('ANTHROPIC_API_KEY environment variable is not set');
+    }
+    anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  return anthropic;
+}
 
 // ── Health check ─────────────────────────────────────────────────────────────
 
@@ -78,7 +85,7 @@ Rules:
 
 Write only the email body now.`;
 
-  const message = await anthropic.messages.create({
+  const message = await getAnthropicClient().messages.create({
     model: 'claude-opus-4-6',
     max_tokens: 300,
     messages: [{ role: 'user', content: prompt }],
