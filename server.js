@@ -29,7 +29,8 @@ app.post('/webhook', async (req, res) => {
     const firstName   = payload.first_name   || payload.firstName   || 'there';
     const companyName = payload.company_name  || payload.companyName || payload.company || '';
     const email       = payload.email         || payload.contactEmail || '';
-    const industry    = payload.industry      || payload.tags?.find(t => t)  || 'your industry';
+    const tagsArray   = Array.isArray(payload.tags) ? payload.tags : (payload.tags ? String(payload.tags).split(',').map(t => t.trim()) : []);
+    const industry    = payload.industry      || tagsArray.find(t => t)     || 'your industry';
     const contactId   = payload.contact_id    || payload.contactId   || payload.id || '';
 
     if (!email) {
