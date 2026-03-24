@@ -110,26 +110,38 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
     throw new Error('GHL_LOCATION_ID environment variable is not set');
   }
 
-  // GHL v2 — send email via conversations/messages
-  const response = await axios.post(
-    'https://services.leadconnectorhq.com/conversations/messages',
-    {
-      type: 'Email',
-      contactId: contactId,
-      locationId: GHL_LOCATION_ID,
-      emailTo: email,
-      subject: `Quick question for ${firstName || 'you'}`,
-      message: emailBody,
-      html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>`,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${GHL_API_KEY}`,
-        'Content-Type': 'application/json',
-        Version: '2021-04-15',
-      },
-    }
-  );
+  const body = {
+    type: 'Email',
+    contactId: contactId,
+    locationId: GHL_LOCATION_ID,
+    emailTo: email,
+    subject: `Quick question for ${firstName || 'you'}`,
+    message: emailBody,
+    html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>`,
+  };
+
+  console.log('GHL request body:', JSON.stringify(body));
+  console.log('GHL API key (first 8 chars):', GHL_API_KEY.substring(0, 8));
+
+  let response;
+  try {
+    response = await axios.post(
+      'https://services.leadconnectorhq.com/conversations/messages',
+      body,
+      {
+        headers: {
+          Authorization: `Bearer ${GHL_API_KEY}`,
+          'Content-Type': 'application/json',
+          Version: '2021-04-15',
+        },
+      }
+    );
+  } catch (err) {
+    const status = err.response?.status;
+    const data = err.response?.data;
+    console.error(`GHL API error ${status}:`, JSON.stringify(data));
+    throw new Error(`GHL API ${status}: ${JSON.stringify(data)}`);
+  }
 
   return response.data;
 }
