@@ -101,18 +101,22 @@ Write the 4 sentences now.`;
 
 async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
   const GHL_API_KEY = process.env.GHL_API_KEY;
+  const GHL_LOCATION_ID = process.env.GHL_LOCATION_ID;
 
   if (!GHL_API_KEY) {
     throw new Error('GHL_API_KEY environment variable is not set');
   }
+  if (!GHL_LOCATION_ID) {
+    throw new Error('GHL_LOCATION_ID environment variable is not set');
+  }
 
-  // GHL v2 — send email to a contact
-  // Docs: https://highlevel.stoplight.io/docs/integrations/
+  // GHL v2 — send email via conversations/messages
   const response = await axios.post(
     'https://services.leadconnectorhq.com/conversations/messages',
     {
       type: 'Email',
       contactId: contactId,
+      locationId: GHL_LOCATION_ID,
       emailTo: email,
       subject: `Quick question for ${firstName || 'you'}`,
       message: emailBody,
