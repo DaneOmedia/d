@@ -131,7 +131,7 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
         headers: {
           Authorization: `Bearer ${GHL_API_KEY}`,
           'Content-Type': 'application/json',
-          Version: '2021-04-15',
+          Version: '2021-07-28',
         },
       }
     );
