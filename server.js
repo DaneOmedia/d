@@ -112,7 +112,10 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
 
   const signature = `\n\n--\nDane Saunders\nFounder & Creative Director\ndaneOmedia\nShort-Form Content for Real Estate & Capital Markets\ngrOw where ideas flOw.\nContact@daneomedia.com\n(805)-320-2723\nhttps://daneomedia.com`;
 
-  const signatureHtml = `<br><br><hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+  const calendlyUrl = 'https://calendly.com/contact-daneomedia/30min';
+  const calendlyButton = `<a href="${calendlyUrl}" style="display:inline-block;padding:10px 20px;background:#000;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px;">Book Call Today</a>`;
+
+  const signatureHtml = `<br><br>
 <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
   <strong>Dane Saunders</strong><br>
   Founder &amp; Creative Director<br>
@@ -124,6 +127,10 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
   <a href="https://daneomedia.com">daneomedia.com</a>
 </p>`;
 
+  const emailBodyHtml = emailBody
+    .replace(/\n/g, '<br>')
+    .replace(calendlyUrl, calendlyButton);
+
   const body = {
     type: 'Email',
     contactId: contactId,
@@ -131,7 +138,7 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
     emailTo: email,
     subject: `Quick question for ${firstName || 'you'}`,
     message: emailBody + signature,
-    html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>${signatureHtml}`,
+    html: `<p>${emailBodyHtml}</p>${signatureHtml}`,
   };
 
   console.log('GHL request body:', JSON.stringify(body));
