@@ -75,7 +75,6 @@ async function generateEmail({ firstName, companyName }) {
 
 STRICT RULES YOU MUST FOLLOW:
 - Write exactly 4 short sentences. No more, no less.
-- The final sentence must end with this exact link on its own: https://calendly.com/contact-daneomedia/30min
 - Never use dashes or hyphens anywhere.
 - Never use bullet points or lists.
 - Never use these words: cold, outbound, pipeline, deliverability, leverage, solutions, agency, strategy, tighten, deliver, campaigns, marketing, outreach.
@@ -89,7 +88,7 @@ STRICT RULES YOU MUST FOLLOW:
 Sentence 1: Greet ${firstName} warmly and casually mention you work with realtors in the area on photos, video, and content.
 Sentence 2: Say that the realtors you work with win more listings because sellers choose the agent who looks the most professional and put-together.
 Sentence 3: Make it punchy and specific — great visuals are often what makes a seller sign with one agent over another, and most realtors are leaving that edge on the table.
-Sentence 4: Ask if they have 15 minutes to connect and book a time, ending with exactly this link: https://calendly.com/contact-daneomedia/30min`,
+Sentence 4: Ask if they have 15 minutes to connect and book a time. Do not include any link.`,
       },
     ],
   });
@@ -113,7 +112,7 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
   const signature = `\n\n--\nDane Saunders\nFounder & Creative Director\ndaneOmedia\nShort-Form Content for Real Estate & Capital Markets\ngrOw where ideas flOw.\nContact@daneomedia.com\n(805)-320-2723\nhttps://daneomedia.com`;
 
   const calendlyUrl = 'https://calendly.com/contact-daneomedia/30min';
-  const calendlyButton = `<a href="${calendlyUrl}" style="display:inline-block;padding:10px 20px;background:#000;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px;">Book Call Today</a>`;
+  const calendlyButton = `<a href="${calendlyUrl}" style="display:inline-block;padding:10px 20px;background:#1c9c91;color:#fff;text-decoration:none;border-radius:4px;font-weight:bold;font-size:14px;">Book Call Today</a>`;
 
   const signatureHtml = `<br><br>
 <p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
@@ -127,9 +126,7 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
   <a href="https://daneomedia.com">daneomedia.com</a>
 </p>`;
 
-  const emailBodyHtml = emailBody
-    .replace(/\n/g, '<br>')
-    .replace(calendlyUrl, calendlyButton);
+  const emailBodyHtml = emailBody.replace(/\n/g, '<br>');
 
   const body = {
     type: 'Email',
@@ -137,8 +134,8 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
     locationId: GHL_LOCATION_ID,
     emailTo: email,
     subject: `Quick question for ${firstName || 'you'}`,
-    message: emailBody + signature,
-    html: `<p>${emailBodyHtml}</p>${signatureHtml}`,
+    message: emailBody + `\n\nBook Call Today: ${calendlyUrl}` + signature,
+    html: `<p>${emailBodyHtml}</p><br>${calendlyButton}${signatureHtml}`,
   };
 
   console.log('GHL request body:', JSON.stringify(body));
