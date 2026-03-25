@@ -110,14 +110,28 @@ async function sendEmailViaGHL({ contactId, email, firstName, emailBody }) {
     throw new Error('GHL_LOCATION_ID environment variable is not set');
   }
 
+  const signature = `\n\n--\nDane Saunders\nFounder & Creative Director\ndaneOmedia\nShort-Form Content for Real Estate & Capital Markets\ngrOw where ideas flOw.\nContact@daneomedia.com\n(805)-320-2723\nhttps://daneomedia.com`;
+
+  const signatureHtml = `<br><br><hr style="border:none;border-top:1px solid #eee;margin:16px 0;">
+<p style="margin:0;font-size:14px;color:#333;line-height:1.6;">
+  <strong>Dane Saunders</strong><br>
+  Founder &amp; Creative Director<br>
+  <strong>daneOmedia</strong><br>
+  Short-Form Content for Real Estate &amp; Capital Markets<br>
+  <em>grOw where ideas flOw.</em><br>
+  <a href="mailto:Contact@daneomedia.com">Contact@daneomedia.com</a><br>
+  (805)-320-2723<br>
+  <a href="https://daneomedia.com">daneomedia.com</a>
+</p>`;
+
   const body = {
     type: 'Email',
     contactId: contactId,
     locationId: GHL_LOCATION_ID,
     emailTo: email,
     subject: `Quick question for ${firstName || 'you'}`,
-    message: emailBody,
-    html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>`,
+    message: emailBody + signature,
+    html: `<p>${emailBody.replace(/\n/g, '<br>')}</p>${signatureHtml}`,
   };
 
   console.log('GHL request body:', JSON.stringify(body));
