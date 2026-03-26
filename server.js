@@ -86,7 +86,7 @@ STRICT RULES YOU MUST FOLLOW:
         content: `Write 4 sentences to ${firstName}${companyName ? ` at ${companyName}` : ''}, a realtor.
 
 Sentence 1: Greet ${firstName} warmly and casually mention you work with realtors in the area on photos, video, and content.
-Sentence 2: Say that the realtors you work with win more listings because sellers choose the agent who looks the most professional and put-together.
+Sentence 2: Say that realtors who have strong photos, video, and content win more listings because sellers choose the agent who looks the most professional and put-together.
 Sentence 3: Make it punchy and specific — great visuals are often what makes a seller sign with one agent over another, and most realtors are leaving that edge on the table.
 Sentence 4: Ask if they have 15 minutes to connect and book a time. Do not include any link.`,
       },
