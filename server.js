@@ -90,7 +90,7 @@ STRICT RULES YOU MUST FOLLOW:
         role: 'user',
         content: `Write 4 sentences to ${firstName}${companyName ? ` at ${companyName}` : ''}, a ${profession}.
 
-Sentence 1: Greet ${firstName} warmly and casually mention you work with ${isLender ? 'mortgage lenders' : 'realtors'} in the area on photos, video, and content.
+Sentence 1: Greet ${firstName} warmly and casually mention you work with realtors and mortgage lenders in the area on photos, video, and content.
 Sentence 2: Say that ${isLender ? 'lenders who have strong personal brand content build more trust with borrowers and get more referrals' : 'realtors who have strong photos, video, and content win more listings because sellers choose the agent who looks the most professional and put-together'}.
 Sentence 3: Make it punchy and specific — ${isLender ? 'most lenders blend into the background online and great content is what sets the ones who grow apart from the ones who stay stuck' : 'great visuals are often what makes a seller sign with one agent over another and most realtors are leaving that edge on the table'}.
 Sentence 4: Ask if they have 15 minutes to connect and book a time. Do not include any link.`,
