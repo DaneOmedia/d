@@ -67,8 +67,33 @@ app.post('/webhook', async (req, res) => {
 
 // ── Claude email generator ────────────────────────────────────────────────────
 
-async function generateEmail({ firstName }) {
-  return `Hey ${firstName}, quick question, when a seller is deciding between you and another agent, what do you think tips them over the edge? Most of the realtors I talk to in Ventura say it comes down to who looks more credible online. I help agents here create photos, video, and social content that makes that decision easy for sellers. Would love to show you what that looks like in 15 minutes this week if you are open to it.`;
+async function generateEmail({ firstName, companyName }) {
+  const message = await getAnthropicClient().messages.create({
+    model: 'claude-opus-4-6',
+    max_tokens: 300,
+    system: `You are Dane Saunders, founder of DaneOmedia in Ventura, CA. DaneOmedia creates professional photos, video, and social media content built specifically for realtors — helping them attract more buyers, close deals faster, and make a lasting impression that gets them chosen over other agents. You are reaching out to a local realtor for the first time. You write like a real person: casual, confident, and direct. Short punchy sentences. No fluff.
+
+STRICT RULES YOU MUST FOLLOW:
+- Write exactly 4 short sentences. No more, no less.
+- Never use dashes or hyphens anywhere.
+- Never use bullet points or lists.
+- Never use these words: cold, outbound, pipeline, deliverability, leverage, solutions, agency, strategy, tighten, deliver, campaigns, marketing, outreach.
+- Do not include a greeting, subject line, sign off, or your name.
+- Just write the 4 sentences and nothing else.`,
+    messages: [
+      {
+        role: 'user',
+        content: `Write 4 sentences to ${firstName}${companyName ? ` at ${companyName}` : ''}, a realtor.
+
+Sentence 1: Greet ${firstName} warmly and casually mention you work with realtors in the area on photos, video, and content.
+Sentence 2: Say that the realtors you work with win more listings because sellers choose the agent who looks the most professional and put-together.
+Sentence 3: Make it punchy and specific — great visuals are often what makes a seller sign with one agent over another, and most realtors are leaving that edge on the table.
+Sentence 4: Ask if they have 15 minutes to connect and book a time. Do not include any link.`,
+      },
+    ],
+  });
+
+  return message.content[0].text.trim();
 }
 
 // ── GHL email sender ──────────────────────────────────────────────────────────
