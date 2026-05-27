@@ -1,152 +1,143 @@
-# GHL Cold Email Outreach Webhook
+# Mortgage AI Underwriter
 
-A Node.js webhook server that listens for GoHighLevel contact events, generates a personalized cold outreach email with Claude AI, and sends it back through GoHighLevel automatically.
+An AI-powered mortgage pre-underwriting agent. Upload your documents (1003, paystubs, bank statements, W2s) and get back a structured underwriting decision with conditions, risk flags, and guideline notes — powered by Claude.
 
-## How It Works
+---
 
-1. GoHighLevel triggers a webhook when a contact enters a workflow step
-2. This server extracts the contact's name, company, email, and industry
-3. Claude writes a short, human-sounding cold email tailored to that contact
-4. The server sends the email via the GHL API
+## How to Run Locally
+
+### 1. Clone and install dependencies
+
+```bash
+git clone <your-repo>
+cd <repo-folder>
+
+# Install all dependencies (root + server + client)
+npm run install:all
+```
+
+### 2. Create your `.env` file
+
+```bash
+cp .env.example .env
+```
+
+Open `.env` and fill in your values:
+
+```
+ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+TEAM_PASSWORD=optionlogin
+PORT=3001
+NODE_ENV=development
+```
+
+- `ANTHROPIC_API_KEY` — Get yours at [console.anthropic.com](https://console.anthropic.com/)
+- `TEAM_PASSWORD` — Password to log into the app (default: `optionlogin`)
+- `PORT` — Backend port (default: `3001`)
+
+### 3. Start the app
+
+```bash
+npm run dev
+```
+
+This starts both the backend (port 3001) and frontend (port 5173) concurrently.
+
+Open: **http://localhost:5173**
 
 ---
 
 ## Environment Variables
 
-| Variable | Description |
-|---|---|
-| `ANTHROPIC_API_KEY` | Your Anthropic API key — get it at [console.anthropic.com](https://console.anthropic.com/) |
-| `GHL_API_KEY` | Your GoHighLevel API key — found in GHL > Settings > Integrations > API |
-| `PORT` | (Optional) Port to listen on. Defaults to `3000`. Railway sets this automatically. |
+| Variable | Required | Description |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | Yes | Anthropic Claude API key |
+| `TEAM_PASSWORD` | Yes | Login password for the app |
+| `PORT` | No | Backend port (default: 3001) |
+| `NODE_ENV` | No | `development` or `production` |
 
 ---
 
-## Deploy to Railway.app — Step by Step
+## Usage
 
-### 1. Push this repo to GitHub
+1. **Log in** with your team password
+2. **Upload documents** — drag & drop or click to browse (PDF, JPG, PNG)
+3. **Label each document** using the dropdown (1003, Paystub, W2, Bank Statement, etc.)
+4. **Select loan parameters** — Loan type (Conventional/FHA/VA/USDA), purpose, and occupancy
+5. **Click "Run Pre-Underwrite Analysis"**
+6. Review the structured results: verdict, extracted data, conditions, risk flags, compensating factors, and guideline notes
+7. Use **"New Scenario (same docs)"** to re-run with different loan parameters on the same files
+
+---
+
+## Deploy to Railway
+
+### 1. Push to GitHub
 
 ```bash
-git init
 git add .
 git commit -m "initial commit"
-gh repo create your-repo-name --public --push
+git push origin main
 ```
 
-Or push to an existing repo.
+### 2. Create Railway project
 
-### 2. Create a new Railway project
+1. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
+2. Select your repository
+3. Railway auto-detects Node.js
 
-1. Go to [railway.app](https://railway.app) and log in
-2. Click **New Project** → **Deploy from GitHub repo**
-3. Select your repository
-4. Railway will auto-detect Node.js and deploy it
+### 3. Set environment variables
 
-### 3. Add environment variables
+In your Railway service → **Variables** tab, add:
+- `ANTHROPIC_API_KEY` = your Anthropic key
+- `TEAM_PASSWORD` = your login password
+- `NODE_ENV` = `production`
 
-In your Railway project dashboard:
+Railway automatically injects `PORT` — do not set it manually.
 
-1. Click your service → **Variables** tab
-2. Add the following:
-   - `ANTHROPIC_API_KEY` = your Anthropic key
-   - `GHL_API_KEY` = your GoHighLevel API key
-3. Railway automatically injects `PORT` — do not set it manually
+### 4. Build command
 
-### 4. Get your public URL
+Railway will use the `railway.json` config:
+- **Build**: `npm run build` (builds the React client)
+- **Start**: `node server/index.js` (serves API + static files)
 
-After deploy, go to **Settings** → **Networking** → **Generate Domain**.
+### 5. Get your URL
 
-Your webhook URL will be:
-```
-https://your-app.up.railway.app/webhook
-```
-
-Your health check URL:
-```
-https://your-app.up.railway.app/health
-```
-
-### 5. Configure GoHighLevel Webhook
-
-1. In GHL, open your **Workflow**
-2. Add a **Webhook** action step
-3. Set method to **POST**
-4. Paste your Railway webhook URL: `https://your-app.up.railway.app/webhook`
-5. Set the payload to **Custom** and map the fields (see sample payload below)
+After deploy → **Settings** → **Networking** → **Generate Domain**
 
 ---
 
-## Sample GHL Webhook Payload
+## Supported Document Types
 
-Use this as a reference when building your GHL workflow webhook action. Map your contact fields to these keys:
-
-```json
-{
-  "first_name": "Sarah",
-  "company_name": "Apex Roofing Co",
-  "email": "sarah@apexroofing.com",
-  "industry": "Home Services",
-  "contact_id": "abc123xyz",
-  "contactId": "abc123xyz"
-}
-```
-
-> **Tip:** In the GHL workflow webhook step, use the **Custom Body** option and map each field using GHL's merge tags (e.g. `{{contact.first_name}}`).
-
-Example GHL custom body template:
-
-```json
-{
-  "first_name": "{{contact.first_name}}",
-  "company_name": "{{contact.company_name}}",
-  "email": "{{contact.email}}",
-  "industry": "{{contact.industry}}",
-  "contact_id": "{{contact.id}}"
-}
-```
+- **1003 / URLA** — Uniform Residential Loan Application
+- **Paystubs** — Most recent 30-day paystubs
+- **W2s** — Last 2 years
+- **Bank Statements** — Last 2 months
+- **Tax Returns** — 1040s (used for self-employed income)
+- **Credit Reports** — Tri-merge credit reports
+- **Purchase Contracts** — Sales agreements
+- **Other** — VOE, gift letters, LOE, etc.
 
 ---
 
-## Local Development
+## Loan Programs
 
-```bash
-# Install dependencies
-npm install
-
-# Copy env file and fill in your keys
-cp .env.example .env
-
-# Start the server
-npm start
-
-# Or with auto-reload
-npm run dev
-```
-
-Test your webhook locally with curl:
-
-```bash
-curl -X POST http://localhost:3000/webhook \
-  -H "Content-Type: application/json" \
-  -d '{
-    "first_name": "Sarah",
-    "company_name": "Apex Roofing Co",
-    "email": "sarah@apexroofing.com",
-    "industry": "Home Services",
-    "contact_id": "abc123xyz"
-  }'
-```
-
-Check health:
-
-```bash
-curl http://localhost:3000/health
-```
+| Program | Min FICO | Max LTV | Max DTI |
+|---|---|---|---|
+| Conventional | 620 | 97% (primary) | 50% w/ DU Approve |
+| FHA | 580 | 96.5% | 57% w/ comp. factors |
+| VA | 580 (overlay) | 100% | 41% guideline |
+| USDA | 640 | 100% + fee | 41% |
 
 ---
 
-## Endpoints
+## Architecture
 
-| Method | Path | Description |
-|---|---|---|
-| `POST` | `/webhook` | Receives GHL contact data and sends personalized email |
-| `GET` | `/health` | Returns `server is running` |
+```
+/client          React + Vite + Tailwind CSS frontend
+/server          Node.js + Express backend
+  /routes        auth.js, analyze.js
+  /utils         claude.js (AI integration)
+.env             API keys and config (not committed)
+railway.json     Railway deployment config
+```
