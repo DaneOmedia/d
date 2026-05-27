@@ -11,7 +11,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173',
+  origin: process.env.NODE_ENV === 'production' ? false : ['http://localhost:5173', 'http://localhost:5174'],
   credentials: true,
 }));
 
@@ -23,9 +23,10 @@ app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().
 app.use('/api/auth', authRouter);
 app.use('/api/analyze', analyzeRouter);
 
-// Serve built client in production
-if (process.env.NODE_ENV === 'production') {
-  const clientBuild = path.join(__dirname, '../client/dist');
+// Serve built React client (always — Railway may not set NODE_ENV)
+const clientBuild = path.join(__dirname, '../client/dist');
+const fs = require('fs');
+if (fs.existsSync(clientBuild)) {
   app.use(express.static(clientBuild));
   app.get('*', (req, res) => res.sendFile(path.join(clientBuild, 'index.html')));
 }
