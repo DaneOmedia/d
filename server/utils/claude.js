@@ -1,18 +1,17 @@
+'use strict';
+
 const Anthropic = require('@anthropic-ai/sdk');
 
 let client = null;
-
 function getClient() {
   if (!client) {
-    if (!process.env.ANTHROPIC_API_KEY) {
-      throw new Error('ANTHROPIC_API_KEY is not configured');
-    }
+    if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY is not configured');
     client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   }
   return client;
 }
 
-const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of experience in conventional, FHA, VA, and USDA loan programs. You analyze extracted mortgage document data and return structured pre-underwrite decisions.
+const SYSTEM_PROMPT = `You are a senior mortgage underwriter reading loan documents directly as page images. Extract all relevant data by carefully reading each page. Be thorough — mortgage documents contain critical numbers, dates, and names that must be accurate.
 
 ## LOAN PROGRAM GUIDELINES
 
@@ -32,7 +31,7 @@ const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of e
 - Compensating factors for DTI >43%: 12+ months reserves, or residual income exceeds 20% threshold, or additional income not used in qualifying
 - Reserves: 1 month required; 3 months recommended
 - MIP: Upfront 1.75% + Annual MIP for life of loan if LTV > 90%
-- Derogatories: BK Ch7 2yr seasoning from discharge, BK Ch13 1yr into repayment with trustee approval, Foreclosure 3yr, Short Sale 3yr
+- Derogatories: BK Ch7 2yr from discharge, BK Ch13 1yr into repayment with trustee approval, Foreclosure 3yr, Short Sale 3yr
 
 ### VA (VA Pamphlet 26-7)
 - Minimum FICO: No VA minimum; most lenders require 580+ (overlay)
@@ -41,7 +40,7 @@ const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of e
 - Residual income: Verify family size and region; minimum monthly residual required
 - No PMI / No MIP — VA funding fee instead (1.25%–3.3% depending on usage/down)
 - Reserves: Not required but compensating factor
-- Entitlement: Must confirm COE (Certificate of Eligibility) and remaining entitlement
+- Entitlement: Must confirm COE and remaining entitlement
 - Derogatories: BK Ch7 2yr, Foreclosure 2yr
 
 ### USDA (Rural Development)
@@ -134,7 +133,7 @@ Return ONLY a valid JSON object — no markdown, no code fences, no explanation 
 Conditions must be specific and actionable (e.g., "LOE for $4,200 deposit on 03/15/2024 Chase statement").
 Risk flags: high DTI, thin reserves, recent job change, declining income, large unverified deposits, derogatory history.
 Compensating factors: excess reserves, low LTV, long employment, low payment shock, excellent FICO.
-If data is missing or truncated, note it in conditions and still complete the analysis with available data.`;
+If pages are missing or a document is only partially visible, note it in conditions and complete the analysis with available data.`;
 
 async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
   const anthropic = getClient();
@@ -149,30 +148,23 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
   for (const file of files) {
     const label = file.label || 'Document';
 
-    contentBlocks.push({
-      type: 'text',
-      text: `\n=== ${file.originalname} [${label}] ===`,
-    });
+    contentBlocks.push({ type: 'text', text: `\n=== ${file.originalname} [${label}] ===` });
 
-    if (file.extractedText) {
-      // PDF with successfully extracted text — cheap text tokens
-      contentBlocks.push({
-        type: 'text',
-        text: file.extractedText,
-      });
-    } else if (file.parseError) {
-      // PDF that couldn't be parsed (scanned/encrypted)
-      contentBlocks.push({
-        type: 'text',
-        text: '[PDF text extraction failed — document may be scanned or encrypted. Note as condition requiring re-submission in accessible format.]',
-      });
-    } else if (file.imageData) {
-      // JPG/PNG — send as vision image
-      const mediaType = file.mimetype === 'image/png' ? 'image/png' : 'image/jpeg';
-      contentBlocks.push({
-        type: 'image',
-        source: { type: 'base64', media_type: mediaType, data: file.imageData },
-      });
+    if (file.type === 'pages') {
+      if (file.pages.length === 0) {
+        contentBlocks.push({ type: 'text', text: '[Document skipped — global page budget exhausted. Note as missing in conditions.]' });
+      } else {
+        for (const page of file.pages) {
+          contentBlocks.push({ type: 'text', text: `[Page ${page.pageNum} of ${page.totalPages}]` });
+          contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: page.mediaType, data: page.base64 } });
+        }
+      }
+    } else if (file.type === 'image') {
+      contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: file.mediaType, data: file.base64 } });
+    } else if (file.type === 'text') {
+      contentBlocks.push({ type: 'text', text: file.text });
+    } else {
+      contentBlocks.push({ type: 'text', text: `[${file.message || 'Document could not be processed — note as condition requiring re-submission.'}]` });
     }
   }
 
@@ -188,7 +180,7 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
     messages: [{ role: 'user', content: contentBlocks }],
   });
 
-  const rawText = response.content[0].text.trim();
+  const rawText  = response.content[0].text.trim();
   const jsonText = rawText.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
 
   let parsed;
