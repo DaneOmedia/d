@@ -2,6 +2,9 @@
   "name": "mortgage-ai-underwriter",
   "version": "1.0.0",
   "description": "AI-powered mortgage underwriting agent",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "postinstall": "cd server && npm ci && cd ../client && npm ci && npm run build",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
