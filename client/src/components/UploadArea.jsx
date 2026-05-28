@@ -3,7 +3,8 @@ import React, { useRef, useState } from 'react';
 const DOC_LABELS = ['1003 Application', 'Paystub', 'W2', 'Bank Statement', 'Tax Return', 'Credit Report', 'Purchase Contract', 'Other'];
 
 const ACCEPT = '.pdf,.jpg,.jpeg,.png';
-const MAX_SIZE_MB = 20;
+const MAX_SIZE_MB = 40;
+const MAX_FILES = 15;
 
 function formatBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`;
@@ -52,7 +53,12 @@ export default function UploadArea({ files, setFiles }) {
     setFiles(prev => {
       const existing = new Set(prev.map(p => p.id));
       const deduped = valid.filter(v => !existing.has(v.id));
-      return [...prev, ...deduped];
+      const next = [...prev, ...deduped];
+      if (next.length > MAX_FILES) {
+        setErrors(e => [...e, `Maximum ${MAX_FILES} files allowed`]);
+        return next.slice(0, MAX_FILES);
+      }
+      return next;
     });
   }
 
@@ -121,7 +127,7 @@ export default function UploadArea({ files, setFiles }) {
             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
         <p className="text-slate-300 font-medium text-sm">Drop documents here or click to browse</p>
-        <p className="text-slate-600 text-xs mt-1">PDF, JPG, PNG — up to {MAX_SIZE_MB}MB each — max 10 files</p>
+        <p className="text-slate-600 text-xs mt-1">PDF, JPG, PNG — up to {MAX_SIZE_MB}MB each — max {MAX_FILES} files</p>
         <p className="text-slate-600 text-xs mt-2">1003 · Paystubs · Bank Statements · W2s · Tax Returns</p>
       </div>
 

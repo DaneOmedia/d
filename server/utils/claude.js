@@ -12,7 +12,7 @@ function getClient() {
   return client;
 }
 
-const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of experience in conventional, FHA, VA, and USDA loan programs. You analyze uploaded mortgage documents and return structured pre-underwrite decisions.
+const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of experience in conventional, FHA, VA, and USDA loan programs. You analyze extracted mortgage document data and return structured pre-underwrite decisions.
 
 ## LOAN PROGRAM GUIDELINES
 
@@ -42,15 +42,14 @@ const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of e
 - No PMI / No MIP — VA funding fee instead (1.25%–3.3% depending on usage/down)
 - Reserves: Not required but compensating factor
 - Entitlement: Must confirm COE (Certificate of Eligibility) and remaining entitlement
-- Derogatories: BK Ch7 2yr, Foreclosure 2yr (VA may be shorter with extenuating circumstances)
+- Derogatories: BK Ch7 2yr, Foreclosure 2yr
 
 ### USDA (Rural Development)
 - Minimum FICO: 640 (GUS approval); lower needs manual underwrite
 - Max LTV: 100% + financed guarantee fee (up to 102%)
 - Max DTI: 29%/41% standard; up to 32%/44% with compensating factors
 - Income limits: Cannot exceed 115% of Area Median Income (AMI) — flag for review
-- Property: Must be in USDA-eligible rural area
-- Occupancy: Primary residence only
+- Property: Must be in USDA-eligible rural area; primary residence only
 - Reserves: Not required
 - Derogatories: BK 3yr, Foreclosure 3yr
 
@@ -63,24 +62,24 @@ const SYSTEM_PROMPT = `You are a senior mortgage underwriter with 20+ years of e
 - Part-time: 2-year history required; use 2-year average
 
 ## DTI CALCULATION
-- Front-end (housing) DTI = (PITIA) / Gross Monthly Income
-- Back-end (total) DTI = (PITIA + all monthly obligations) / Gross Monthly Income
+- Front-end DTI = PITIA / Gross Monthly Income
+- Back-end DTI = (PITIA + all monthly obligations) / Gross Monthly Income
 - Include: installment loans, revolving minimums, student loans (1% of balance if IBR/deferred), auto, child support, alimony
-- Exclude: utilities, insurance (non-property), cell phone, subscription services
+- Exclude: utilities, insurance (non-property), cell phone, subscriptions
 
 ## ASSET & RESERVE RULES
-- Verify source of funds: Large deposits (>50% monthly income) require LOE and documentation
-- Gift funds: Allowed on primary; donor letter + transfer docs required
-- Retirement assets: Count 60% if under 59.5 (early withdrawal penalty)
+- Large deposits (>50% monthly income) require LOE and documentation
+- Gift funds: allowed on primary; donor letter + transfer docs required
+- Retirement assets: count 60% if borrower under 59.5
 - Reserves = (Total liquid assets after down payment and closing costs) / PITIA
 
 ## OUTPUT FORMAT
-You MUST return ONLY a valid JSON object — no markdown, no explanation, no code fences. Return exactly this structure:
+Return ONLY a valid JSON object — no markdown, no code fences, no explanation outside the JSON.
 
 {
   "verdict": "APPROVE WITH CONDITIONS",
   "verdict_code": "AWC",
-  "summary": "One to two sentence plain-English summary of the file.",
+  "summary": "One to two sentence plain-English summary.",
   "extracted_data": {
     "borrower_name": "",
     "coborrower_name": "",
@@ -128,95 +127,78 @@ You MUST return ONLY a valid JSON object — no markdown, no explanation, no cod
 
 ## VERDICT CODES
 - "APPROVE" — Meets all guidelines, no material conditions
-- "AWC" (Approve with Conditions) — Meets guidelines with standard PTD conditions
-- "SUSPEND" — Unable to determine eligibility; missing critical documents or data
-- "INELIGIBLE" — Does not meet program guidelines (specific reason required)
+- "AWC" — Approve with Conditions; meets guidelines with standard PTD items
+- "SUSPEND" — Cannot determine eligibility; critical documents missing or unreadable
+- "INELIGIBLE" — Does not meet program guidelines (state specific reason)
 
-## GUIDELINES FOR CONDITIONS
-List each condition as a specific, actionable item (e.g., "Provide 2024 W2 from ABC Corp", "LOE required for $4,200 deposit on 03/15/2024 Chase statement", "12 months canceled checks for child support obligation").
-
-## GUIDELINES FOR RISK FLAGS
-Identify elevated risks: high DTI, thin reserves, recent job change, declining income, large unverified deposits, gaps in employment, derogatory history, high LTV.
-
-## GUIDELINES FOR COMPENSATING FACTORS
-Identify positive factors that offset risk: reserves above requirement, low LTV, long employment history, low payment shock, strong residual income, excellent FICO.
-
-If documents are incomplete, note what is missing in conditions and still provide best analysis with available information.`;
+Conditions must be specific and actionable (e.g., "LOE for $4,200 deposit on 03/15/2024 Chase statement").
+Risk flags: high DTI, thin reserves, recent job change, declining income, large unverified deposits, derogatory history.
+Compensating factors: excess reserves, low LTV, long employment, low payment shock, excellent FICO.
+If data is missing or truncated, note it in conditions and still complete the analysis with available data.`;
 
 async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
   const anthropic = getClient();
 
   const contentBlocks = [];
 
-  // Add intro text
   contentBlocks.push({
     type: 'text',
-    text: `Please analyze the following mortgage documents for a ${loanType} ${loanPurpose} loan on a ${occupancy} property. Extract all relevant data and provide a complete pre-underwrite analysis.`,
+    text: `Analyze the following mortgage documents for a ${loanType} ${loanPurpose} loan on a ${occupancy} property.\n`,
   });
 
-  // Add each document
   for (const file of files) {
     const label = file.label || 'Document';
-    const isPDF = file.mimetype === 'application/pdf';
 
     contentBlocks.push({
       type: 'text',
-      text: `\n--- Document: ${file.originalname} (Type: ${label}) ---`,
+      text: `\n=== ${file.originalname} [${label}] ===`,
     });
 
-    if (isPDF) {
+    if (file.extractedText) {
+      // PDF with successfully extracted text — cheap text tokens
       contentBlocks.push({
-        type: 'document',
-        source: {
-          type: 'base64',
-          media_type: 'application/pdf',
-          data: file.data,
-        },
+        type: 'text',
+        text: file.extractedText,
       });
-    } else {
+    } else if (file.parseError) {
+      // PDF that couldn't be parsed (scanned/encrypted)
+      contentBlocks.push({
+        type: 'text',
+        text: '[PDF text extraction failed — document may be scanned or encrypted. Note as condition requiring re-submission in accessible format.]',
+      });
+    } else if (file.imageData) {
+      // JPG/PNG — send as vision image
       const mediaType = file.mimetype === 'image/png' ? 'image/png' : 'image/jpeg';
       contentBlocks.push({
         type: 'image',
-        source: {
-          type: 'base64',
-          media_type: mediaType,
-          data: file.data,
-        },
+        source: { type: 'base64', media_type: mediaType, data: file.imageData },
       });
     }
   }
 
   contentBlocks.push({
     type: 'text',
-    text: `\nLoan Parameters:
-- Loan Type: ${loanType}
-- Loan Purpose: ${loanPurpose}
-- Occupancy: ${occupancy}
-
-Return ONLY the JSON analysis object. No markdown, no explanation.`,
+    text: `\nLoan Parameters: ${loanType} | ${loanPurpose} | ${occupancy}\n\nReturn ONLY the JSON object. No markdown, no explanation.`,
   });
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4096,
+    max_tokens: 2048,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: contentBlocks }],
   });
 
   const rawText = response.content[0].text.trim();
-
-  // Strip any accidental markdown fences
   const jsonText = rawText.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
 
   let parsed;
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    // Return a structured error response if JSON parsing fails
     parsed = {
       verdict: 'SUSPEND',
       verdict_code: 'SUSPEND',
-      summary: 'Analysis could not be completed. The AI response was not in the expected format.',
+      summary: 'Analysis could not be completed — AI response was not valid JSON. Please resubmit.',
       extracted_data: {
         borrower_name: '',
         loan_amount: 0,
