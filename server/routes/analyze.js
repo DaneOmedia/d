@@ -60,17 +60,17 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
     // Extract text from PDFs; pass images through
     const processed = await Promise.all(rawFiles.map(processFile));
 
-    // Enforce total character budget across all PDF text
+    // Enforce hard total character budget — applied AFTER per-doc truncation
     let totalChars = 0;
     const files = processed.map(f => {
       if (!f.extractedText) {
-        // Image — convert to base64 for Claude vision
+        // Image or failed PDF — pass as base64 vision (JPG/PNG) or flag parse error
         return {
           originalname: f.originalname,
           mimetype: f.mimetype,
           size: f.size,
           label: f.label,
-          imageData: f.buffer.toString('base64'),
+          imageData: f.mimetype === 'application/pdf' ? null : f.buffer.toString('base64'),
           extractedText: null,
           parseError: f.parseError || false,
         };
@@ -78,6 +78,7 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       const remaining = MAX_TOTAL_CHARS - totalChars;
       const text = remaining > 0 ? f.extractedText.slice(0, remaining) : '';
       totalChars += text.length;
+      console.log(`  [${f.label}] ${f.originalname}: ${text.length} chars (file: ${(f.size / 1024).toFixed(0)}KB)`);
       return {
         originalname: f.originalname,
         mimetype: f.mimetype,
@@ -89,12 +90,14 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       };
     });
 
-    const textDocs = files.filter(f => f.extractedText).length;
+    const textDocs = files.filter(f => f.extractedText && f.extractedText.length > 0).length;
     const imageDocs = files.filter(f => f.imageData).length;
     const failedDocs = files.filter(f => f.parseError).length;
+    const skippedDocs = files.filter(f => f.extractedText === '').length;
     console.log(
-      `Analyzing ${files.length} doc(s) [${textDocs} text, ${imageDocs} image, ${failedDocs} parse-failed]` +
-      ` — ${loanType} ${loanPurpose} ${occupancy} — ~${totalChars} chars`
+      `TOTAL: ${files.length} doc(s) — ${textDocs} text (${totalChars} chars), ` +
+      `${imageDocs} image, ${failedDocs} parse-failed, ${skippedDocs} over-budget` +
+      ` — ${loanType} ${loanPurpose} ${occupancy}`
     );
 
     const result = await analyzeDocuments({ files, loanType, loanPurpose, occupancy });
