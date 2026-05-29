@@ -3,6 +3,9 @@
 const express  = require('express');
 const multer   = require('multer');
 const pdfParse = require('pdf-parse');
+const fs       = require('fs');
+const os       = require('os');
+const path     = require('path');
 const { analyzeDocuments } = require('../utils/claude');
 
 const router = express.Router();
@@ -31,6 +34,40 @@ function requireAuth(req, res, next) {
 }
 
 const TOTAL_CHAR_CAP = 15000;
+const MIN_TEXT_CHARS = 500;
+
+async function pdfVisionFallback(buffer, numpages) {
+  const { fromBuffer } = await import('pdf2pic');
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf2pic-'));
+  try {
+    const convert = fromBuffer(buffer, {
+      density:      200,
+      saveFilename: 'page',
+      savePath:     tmpDir,
+      format:       'jpeg',
+      width:        1700,
+      height:       2200,
+    });
+
+    const startPage = numpages >= 4 ? 4 : 1;
+    const endPage   = Math.min(12, numpages);
+    const pages     = [];
+
+    for (let p = startPage; p <= endPage; p++) {
+      try {
+        const result = await convert(p, { responseType: 'base64' });
+        if (result && result.base64) {
+          pages.push({ pageNum: p, totalPages: numpages, base64: result.base64, mediaType: 'image/jpeg' });
+        }
+      } catch {
+        break; // page doesn't exist — stop
+      }
+    }
+    return pages;
+  } finally {
+    try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
+  }
+}
 
 router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
   try {
@@ -52,23 +89,42 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       const name  = file.originalname;
 
       if (file.mimetype === 'application/pdf') {
+        // Step 1: try pdf-parse for text-based PDFs
+        let parsed = null;
         try {
-          const data = await pdfParse(file.buffer, { max: 0 });
-          const text = (data.text || '').trim();
-          console.log(`  [pdf] ${label} "${name}": ${text.length} chars`);
-          files.push({ originalname: name, label, type: 'text', text });
+          parsed = await pdfParse(file.buffer, { max: 0 });
         } catch (err) {
-          console.warn(`  [pdf-fail] ${label} "${name}": ${err.message}`);
-          files.push({ originalname: name, label, type: 'error', message: `PDF could not be read — please re-submit: ${err.message}` });
+          console.warn(`  [pdf-parse-fail] ${label} "${name}": ${err.message}`);
+        }
+
+        const text     = ((parsed && parsed.text) || '').trim();
+        const numpages = (parsed && parsed.numpages) || 1;
+
+        if (text.length >= MIN_TEXT_CHARS) {
+          console.log(`  [pdf-text] ${label} "${name}": ${text.length} chars, ${numpages} pages`);
+          files.push({ originalname: name, label, type: 'text', text });
+        } else {
+          // Step 2: image-based PDF — use pdf2pic vision
+          console.log(`  [pdf-scan] ${label} "${name}": ${text.length} chars — using vision (pages ${numpages >= 4 ? 4 : 1}–${Math.min(12, numpages)})`);
+          try {
+            const pages = await pdfVisionFallback(file.buffer, numpages);
+            if (pages.length === 0) throw new Error('no pages converted');
+            console.log(`  [pdf-vision] ${label} "${name}": ${pages.length} page image(s)`);
+            files.push({ originalname: name, label, type: 'pages', pages });
+          } catch (vErr) {
+            console.warn(`  [pdf-vision-fail] ${label} "${name}": ${vErr.message}`);
+            files.push({ originalname: name, label, type: 'error', message: `PDF is image-based and could not be converted — re-submit as a flattened or text-based PDF: ${vErr.message}` });
+          }
         }
       } else {
+        // JPG / PNG — send directly as image
         const mediaType = file.mimetype === 'image/png' ? 'image/png' : 'image/jpeg';
         files.push({ originalname: name, label, type: 'image', base64: file.buffer.toString('base64'), mediaType });
         console.log(`  [image] ${label} "${name}": ${(file.size / 1024).toFixed(0)}KB`);
       }
     }
 
-    // Enforce 15,000-char cap across all text docs in upload order
+    // Apply 15,000-char cap across text docs (in upload order)
     let charsUsed = 0;
     const capped = files.map(doc => {
       if (doc.type !== 'text') return doc;
@@ -82,12 +138,15 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       return { ...doc, text };
     });
 
-    const textDocs  = capped.filter(f => f.type === 'text' && f.text.length > 0);
-    const imageDocs = capped.filter(f => f.type === 'image');
-    const errorDocs = capped.filter(f => f.type === 'error');
+    const textDocs   = capped.filter(f => f.type === 'text' && f.text.length > 0);
+    const visionDocs = capped.filter(f => f.type === 'pages');
+    const imageDocs  = capped.filter(f => f.type === 'image');
+    const errorDocs  = capped.filter(f => f.type === 'error');
+    const totalPages = visionDocs.reduce((n, d) => n + d.pages.length, 0);
     console.log(
       `TOTAL: ${capped.length} doc(s) — ${textDocs.length} text (${charsUsed} chars), ` +
-      `${imageDocs.length} image, ${errorDocs.length} error — ${loanType} ${loanPurpose} ${occupancy}`
+      `${visionDocs.length} vision (${totalPages} pages), ${imageDocs.length} image, ${errorDocs.length} error — ` +
+      `${loanType} ${loanPurpose} ${occupancy}`
     );
 
     const result = await analyzeDocuments({ files: capped, loanType, loanPurpose, occupancy });
