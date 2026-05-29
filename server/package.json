@@ -8,12 +8,11 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
-    "canvas": "^3.2.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "multer": "^1.4.5-lts.1",
-    "pdfjs-dist": "^5.4.296"
+    "pdf-parse": "^2.4.5"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"

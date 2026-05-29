@@ -1,9 +1,9 @@
 'use strict';
 
-const express = require('express');
-const multer  = require('multer');
-const { analyzeDocuments }  = require('../utils/claude');
-const { renderPDFToImages } = require('../utils/pdfRenderer');
+const express  = require('express');
+const multer   = require('multer');
+const pdfParse = require('pdf-parse');
+const { analyzeDocuments } = require('../utils/claude');
 
 const router = express.Router();
 
@@ -30,6 +30,8 @@ function requireAuth(req, res, next) {
   next();
 }
 
+const TOTAL_CHAR_CAP = 15000;
+
 router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
   try {
     const { loanType, loanPurpose, occupancy, labels } = req.body;
@@ -51,13 +53,13 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
 
       if (file.mimetype === 'application/pdf') {
         try {
-          const pages = await renderPDFToImages(file.buffer, label);
-          if (!pages.length) throw new Error('no pages rendered');
-          console.log(`  [pdf] ${label} "${name}": ${pages.length} page(s)`);
-          files.push({ originalname: name, label, type: 'pages', pages });
+          const data = await pdfParse(file.buffer, { max: 0 });
+          const text = (data.text || '').trim();
+          console.log(`  [pdf] ${label} "${name}": ${text.length} chars`);
+          files.push({ originalname: name, label, type: 'text', text });
         } catch (err) {
           console.warn(`  [pdf-fail] ${label} "${name}": ${err.message}`);
-          files.push({ originalname: name, label, type: 'error', message: 'PDF could not be rendered — may be encrypted or corrupt. Please re-submit as an image or unlocked PDF.' });
+          files.push({ originalname: name, label, type: 'error', message: `PDF could not be read — please re-submit: ${err.message}` });
         }
       } else {
         const mediaType = file.mimetype === 'image/png' ? 'image/png' : 'image/jpeg';
@@ -66,17 +68,29 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       }
     }
 
-    const pageDocs  = files.filter(f => f.type === 'pages');
-    const imageDocs = files.filter(f => f.type === 'image');
-    const errorDocs = files.filter(f => f.type === 'error');
-    const totalPages = pageDocs.reduce((n, d) => n + d.pages.length, 0);
+    // Enforce 15,000-char cap across all text docs in upload order
+    let charsUsed = 0;
+    const capped = files.map(doc => {
+      if (doc.type !== 'text') return doc;
+      const remaining = TOTAL_CHAR_CAP - charsUsed;
+      if (remaining <= 0) {
+        console.log(`  [cap] "${doc.originalname}" — omitted, 15k char budget exhausted`);
+        return { ...doc, text: '' };
+      }
+      const text = doc.text.slice(0, remaining);
+      charsUsed += text.length;
+      return { ...doc, text };
+    });
+
+    const textDocs  = capped.filter(f => f.type === 'text' && f.text.length > 0);
+    const imageDocs = capped.filter(f => f.type === 'image');
+    const errorDocs = capped.filter(f => f.type === 'error');
     console.log(
-      `TOTAL: ${files.length} doc(s) — ${pageDocs.length} pdf (${totalPages} pages), ` +
-      `${imageDocs.length} image, ${errorDocs.length} error — ` +
-      `${loanType} ${loanPurpose} ${occupancy}`
+      `TOTAL: ${capped.length} doc(s) — ${textDocs.length} text (${charsUsed} chars), ` +
+      `${imageDocs.length} image, ${errorDocs.length} error — ${loanType} ${loanPurpose} ${occupancy}`
     );
 
-    const result = await analyzeDocuments({ files, loanType, loanPurpose, occupancy });
+    const result = await analyzeDocuments({ files: capped, loanType, loanPurpose, occupancy });
     res.json(result);
   } catch (err) {
     console.error('Analysis error:', err.message);
