@@ -121,7 +121,12 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
 
     contentBlocks.push({ type: 'text', text: `\n=== ${file.originalname} [${label}] ===` });
 
-    if (file.type === 'image') {
+    if (file.type === 'pages') {
+      for (const page of file.pages) {
+        contentBlocks.push({ type: 'text', text: `[Page ${page.pageNum} of ${page.totalPages}]` });
+        contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: page.mediaType, data: page.base64 } });
+      }
+    } else if (file.type === 'image') {
       contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: file.mediaType, data: file.base64 } });
     } else if (file.type === 'text') {
       contentBlocks.push({ type: 'text', text: file.text.length > 0 ? file.text : '[Empty — no text extracted from this document.]' });
