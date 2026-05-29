@@ -11,9 +11,7 @@ function getClient() {
   return client;
 }
 
-const SYSTEM_PROMPT = `You are a mortgage underwriter reading scanned loan documents as page images. Extract all income data directly from what you see in the images. Read every number, every field label, every schedule name visible on each page — do not skip anything.
-
-You are a mortgage underwriter. Read all documents provided and give a complete underwriting decision.
+const SYSTEM_PROMPT = `You are a mortgage underwriter. Read all documents provided and give a complete underwriting decision.
 
 FIRST: Identify how this borrower earns income. Look at every document. Common income types:
 - W2 wages: use Box 1 or annualized YTD gross ÷ 12
@@ -115,7 +113,7 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
 
   contentBlocks.push({
     type: 'text',
-    text: `Analyze the following mortgage documents for a ${loanType} ${loanPurpose} loan on a ${occupancy} property. Follow the 4-step underwriting process in your system prompt exactly.\n`,
+    text: `Underwrite the following mortgage documents for a ${loanType} ${loanPurpose} loan on a ${occupancy} property.\n`,
   });
 
   for (const file of files) {
@@ -123,19 +121,10 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
 
     contentBlocks.push({ type: 'text', text: `\n=== ${file.originalname} [${label}] ===` });
 
-    if (file.type === 'pages') {
-      if (file.pages.length === 0) {
-        contentBlocks.push({ type: 'text', text: '[Document skipped — global page budget exhausted. Note as missing in conditions.]' });
-      } else {
-        for (const page of file.pages) {
-          contentBlocks.push({ type: 'text', text: `[Page ${page.pageNum} of ${page.totalPages}]` });
-          contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: page.mediaType, data: page.base64 } });
-        }
-      }
-    } else if (file.type === 'image') {
+    if (file.type === 'image') {
       contentBlocks.push({ type: 'image', source: { type: 'base64', media_type: file.mediaType, data: file.base64 } });
     } else if (file.type === 'text') {
-      contentBlocks.push({ type: 'text', text: file.text });
+      contentBlocks.push({ type: 'text', text: file.text.length > 0 ? file.text : '[Empty — no text extracted from this document.]' });
     } else {
       contentBlocks.push({ type: 'text', text: `[${file.message || 'Document could not be processed — note as condition requiring re-submission.'}]` });
     }
@@ -143,7 +132,7 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
 
   contentBlocks.push({
     type: 'text',
-    text: `\nLoan Parameters: ${loanType} | ${loanPurpose} | ${occupancy}\n\nComplete all 4 steps, then return ONLY the JSON object. No markdown, no explanation.`,
+    text: `\nLoan Parameters: ${loanType} | ${loanPurpose} | ${occupancy}\n\nReturn ONLY the JSON object. No markdown, no explanation.`,
   });
 
   const response = await anthropic.messages.create({
