@@ -33,7 +33,6 @@ function requireAuth(req, res, next) {
   next();
 }
 
-const TOTAL_CHAR_CAP = 15000;
 const MIN_TEXT_CHARS = 500;
 
 async function pdfVisionFallback(buffer, numpages, label) {
@@ -102,7 +101,7 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
         const numpages = (parsed && parsed.numpages) || 1;
 
         if (text.length >= MIN_TEXT_CHARS) {
-          console.log(`  [pdf-text] ${label} "${name}": ${text.length} chars, ${numpages} pages`);
+          console.log(`  [pdf-text] ${label} "${name}": ${numpages} pages, ${text.length} chars`);
           files.push({ originalname: name, label, type: 'text', text });
         } else {
           // Step 2: image-based PDF — use pdf2pic vision
@@ -127,32 +126,19 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       }
     }
 
-    // Apply 15,000-char cap across text docs (in upload order)
-    let charsUsed = 0;
-    const capped = files.map(doc => {
-      if (doc.type !== 'text') return doc;
-      const remaining = TOTAL_CHAR_CAP - charsUsed;
-      if (remaining <= 0) {
-        console.log(`  [cap] "${doc.originalname}" — omitted, 15k char budget exhausted`);
-        return { ...doc, text: '' };
-      }
-      const text = doc.text.slice(0, remaining);
-      charsUsed += text.length;
-      return { ...doc, text };
-    });
-
-    const textDocs   = capped.filter(f => f.type === 'text' && f.text.length > 0);
-    const visionDocs = capped.filter(f => f.type === 'pages');
-    const imageDocs  = capped.filter(f => f.type === 'image');
-    const errorDocs  = capped.filter(f => f.type === 'error');
+    const textDocs   = files.filter(f => f.type === 'text');
+    const visionDocs = files.filter(f => f.type === 'pages');
+    const imageDocs  = files.filter(f => f.type === 'image');
+    const errorDocs  = files.filter(f => f.type === 'error');
+    const totalChars = textDocs.reduce((n, d) => n + d.text.length, 0);
     const totalPages = visionDocs.reduce((n, d) => n + d.pages.length, 0);
     console.log(
-      `TOTAL: ${capped.length} doc(s) — ${textDocs.length} text (${charsUsed} chars), ` +
+      `TOTAL: ${files.length} doc(s) — ${textDocs.length} text (${totalChars} chars), ` +
       `${visionDocs.length} vision (${totalPages} pages), ${imageDocs.length} image, ${errorDocs.length} error — ` +
       `${loanType} ${loanPurpose} ${occupancy}`
     );
 
-    const result = await analyzeDocuments({ files: capped, loanType, loanPurpose, occupancy });
+    const result = await analyzeDocuments({ files, loanType, loanPurpose, occupancy });
     res.json(result);
   } catch (err) {
     console.error('Analysis error:', err.message);
