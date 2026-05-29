@@ -104,7 +104,9 @@ VERDICT CODES:
 - "SUSPEND" — cannot determine eligibility; critical documents are missing or unreadable
 - "INELIGIBLE" — fails program guidelines; state the specific reason
 
-Conditions must be specific and actionable. Risk flags: high DTI, thin reserves, declining income, large unverified deposits, derogatory credit. Compensating factors: excess reserves, low LTV, stable employment, high FICO.`;
+Conditions must be specific and actionable. Risk flags: high DTI, thin reserves, declining income, large unverified deposits, derogatory credit. Compensating factors: excess reserves, low LTV, stable employment, high FICO.
+
+CRITICAL: Your entire response must be valid JSON only. No text before or after the JSON object. Do not truncate the JSON. Ensure all arrays and objects are properly closed.`;
 
 async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
   const anthropic = getClient();
@@ -142,18 +144,40 @@ async function analyzeDocuments({ files, loanType, loanPurpose, occupancy }) {
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 2048,
+    max_tokens: 4096,
     system: SYSTEM_PROMPT,
     messages: [{ role: 'user', content: contentBlocks }],
   });
 
-  const rawText  = response.content[0].text.trim();
-  const jsonText = rawText.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+  const rawText = response.content[0].text.trim();
 
-  let parsed;
+  let parsed = null;
+
+  // Strategy 1: strip markdown fences and parse directly
   try {
-    parsed = JSON.parse(jsonText);
-  } catch {
+    const s1 = rawText.replace(/^```json?\s*/i, '').replace(/```\s*$/i, '').trim();
+    parsed = JSON.parse(s1);
+  } catch { /* fall through */ }
+
+  // Strategy 2: regex extract the outermost {...}
+  if (!parsed) {
+    try {
+      const m = rawText.match(/\{[\s\S]*\}/);
+      if (m) parsed = JSON.parse(m[0]);
+    } catch { /* fall through */ }
+  }
+
+  // Strategy 3: slice from first { to last }
+  if (!parsed) {
+    try {
+      const first = rawText.indexOf('{');
+      const last  = rawText.lastIndexOf('}');
+      if (first !== -1 && last > first) parsed = JSON.parse(rawText.slice(first, last + 1));
+    } catch { /* fall through */ }
+  }
+
+  if (!parsed) {
+    console.error('JSON parse failed. Raw response (first 1000 chars):\n', rawText.slice(0, 1000));
     parsed = {
       verdict: 'SUSPEND',
       verdict_code: 'SUSPEND',
