@@ -2,7 +2,8 @@
 
 const express  = require('express');
 const multer   = require('multer');
-const pdfParse = require('pdf-parse');
+const _pdfParse = require('pdf-parse');
+const pdfParse  = typeof _pdfParse === 'function' ? _pdfParse : _pdfParse.default;
 const fs       = require('fs');
 const os       = require('os');
 const path     = require('path');
@@ -49,20 +50,15 @@ async function pdfVisionFallback(buffer, numpages, label) {
     });
 
     const isTaxReturn = /tax\s*return|1040/i.test(label || '');
-    const startPage   = 1;                                            // always start from page 1
     const endPage     = isTaxReturn ? Math.min(20, numpages) : Math.min(12, numpages);
-    const pages       = [];
+    const pageNums    = Array.from({ length: endPage }, (_, i) => i + 1); // [1, 2, … endPage]
 
-    for (let p = startPage; p <= endPage; p++) {
-      try {
-        const result = await convert(p, { responseType: 'base64' });
-        if (result && result.base64) {
-          pages.push({ pageNum: p, totalPages: numpages, base64: result.base64, mediaType: 'image/jpeg' });
-        }
-      } catch {
-        break; // page doesn't exist — stop
-      }
-    }
+    const results = await convert.bulk(pageNums, { responseType: 'base64' });
+
+    const pages = results
+      .filter(r => r && r.base64)
+      .map((r, i) => ({ pageNum: pageNums[i], totalPages: numpages, base64: r.base64, mediaType: 'image/jpeg' }));
+
     return pages;
   } finally {
     try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
