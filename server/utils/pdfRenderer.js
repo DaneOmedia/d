@@ -19,16 +19,9 @@ function getPdfjs() {
   return _pdfjsPromise;
 }
 
-const MAX_PAGE_WIDTH = 1000; // px — keeps each image within ~1 Claude vision tile
-const JPEG_QUALITY   = 0.85;
-
-// Number of pages to render per document type
-function pageLimit(label) {
-  const l = (label || '').toLowerCase();
-  if (/tax\s*return|1040|schedule/i.test(l)) return 6;
-  if (/bank\s*statement|statement/i.test(l)) return 10;
-  return 4; // W2, paystub, 1003, credit report, purchase contract, other
-}
+const MAX_PAGE_WIDTH = 1200; // px — wide enough to read fine print on tax docs
+const JPEG_QUALITY   = 0.90;
+const MAX_PAGES      = 8;    // per-document limit
 
 /**
  * Render a PDF buffer into an array of JPEG page images.
@@ -50,8 +43,7 @@ async function renderPDFToImages(buffer, label) {
     verbosity: 0,
   }).promise;
 
-  const limit    = pageLimit(label);
-  const numPages = Math.min(pdf.numPages, limit);
+  const numPages = Math.min(pdf.numPages, MAX_PAGES);
   const pages    = [];
 
   for (let i = 1; i <= numPages; i++) {
@@ -86,4 +78,4 @@ async function renderPDFToImages(buffer, label) {
   return pages;
 }
 
-module.exports = { renderPDFToImages, pageLimit };
+module.exports = { renderPDFToImages };
