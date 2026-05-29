@@ -2,8 +2,7 @@
 
 const express  = require('express');
 const multer   = require('multer');
-const _pdfParse = require('pdf-parse');
-const pdfParse  = typeof _pdfParse === 'function' ? _pdfParse : _pdfParse.default;
+const { PDFParse } = require('pdf-parse');
 const fs       = require('fs');
 const os       = require('os');
 const path     = require('path');
@@ -37,10 +36,16 @@ function requireAuth(req, res, next) {
 const MIN_TEXT_CHARS = 500;
 
 async function pdfVisionFallback(buffer, numpages, label) {
-  const { fromBuffer } = await import('pdf2pic');
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf2pic-'));
+  const { fromPath } = await import('pdf2pic');
+  const tmpDir  = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf2pic-'));
+  const pdfPath = path.join(tmpDir, 'source.pdf');
+  fs.writeFileSync(pdfPath, buffer);
   try {
-    const convert = fromBuffer(buffer, {
+    const isTaxReturn = /tax\s*return|1040/i.test(label || '');
+    // Always try up to the limit; break when a page doesn't exist
+    const endPage = isTaxReturn ? 20 : 12;
+
+    const convert = fromPath(pdfPath, {
       density:      200,
       saveFilename: 'page',
       savePath:     tmpDir,
@@ -49,16 +54,17 @@ async function pdfVisionFallback(buffer, numpages, label) {
       height:       2200,
     });
 
-    const isTaxReturn = /tax\s*return|1040/i.test(label || '');
-    const endPage     = isTaxReturn ? Math.min(20, numpages) : Math.min(12, numpages);
-    const pageNums    = Array.from({ length: endPage }, (_, i) => i + 1); // [1, 2, … endPage]
-
-    const results = await convert.bulk(pageNums, { responseType: 'base64' });
-
-    const pages = results
-      .filter(r => r && r.base64)
-      .map((r, i) => ({ pageNum: pageNums[i], totalPages: numpages, base64: r.base64, mediaType: 'image/jpeg' }));
-
+    const pages = [];
+    for (let p = 1; p <= endPage; p++) {
+      try {
+        const result = await convert(p, { responseType: 'base64' });
+        if (result && result.base64) {
+          pages.push({ pageNum: p, totalPages: numpages, base64: result.base64, mediaType: 'image/jpeg' });
+        }
+      } catch {
+        break; // page doesn't exist — stop
+      }
+    }
     return pages;
   } finally {
     try { fs.rmSync(tmpDir, { recursive: true, force: true }); } catch { /* ignore */ }
@@ -85,16 +91,17 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
       const name  = file.originalname;
 
       if (file.mimetype === 'application/pdf') {
-        // Step 1: try pdf-parse for text-based PDFs
+        // Step 1: try pdf-parse for text-based PDFs (v2 API)
         let parsed = null;
         try {
-          parsed = await pdfParse(file.buffer, { max: 0 });
+          const parser = new PDFParse({ data: file.buffer });
+          parsed = await parser.getText();
         } catch (err) {
           console.warn(`  [pdf-parse-fail] ${label} "${name}": ${err.message}`);
         }
 
         const text     = ((parsed && parsed.text) || '').trim();
-        const numpages = (parsed && parsed.numpages) || 1;
+        const numpages = (parsed && parsed.total) || 1;
 
         if (text.length >= MIN_TEXT_CHARS) {
           console.log(`  [pdf-text] ${label} "${name}": ${numpages} pages, ${text.length} chars`);
