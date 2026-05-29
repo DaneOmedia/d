@@ -36,7 +36,7 @@ function requireAuth(req, res, next) {
 const TOTAL_CHAR_CAP = 15000;
 const MIN_TEXT_CHARS = 500;
 
-async function pdfVisionFallback(buffer, numpages) {
+async function pdfVisionFallback(buffer, numpages, label) {
   const { fromBuffer } = await import('pdf2pic');
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'pdf2pic-'));
   try {
@@ -49,9 +49,10 @@ async function pdfVisionFallback(buffer, numpages) {
       height:       2200,
     });
 
-    const startPage = numpages >= 4 ? 4 : 1;
-    const endPage   = Math.min(12, numpages);
-    const pages     = [];
+    const isTaxReturn = /tax\s*return|1040/i.test(label || '');
+    const startPage   = 1;                                            // always start from page 1
+    const endPage     = isTaxReturn ? Math.min(20, numpages) : Math.min(12, numpages);
+    const pages       = [];
 
     for (let p = startPage; p <= endPage; p++) {
       try {
@@ -105,9 +106,11 @@ router.post('/', requireAuth, upload.array('files', 15), async (req, res) => {
           files.push({ originalname: name, label, type: 'text', text });
         } else {
           // Step 2: image-based PDF — use pdf2pic vision
-          console.log(`  [pdf-scan] ${label} "${name}": ${text.length} chars — using vision (pages ${numpages >= 4 ? 4 : 1}–${Math.min(12, numpages)})`);
+          const isTaxReturn = /tax\s*return|1040/i.test(label);
+          const vEnd = isTaxReturn ? Math.min(20, numpages) : Math.min(12, numpages);
+          console.log(`  [pdf-scan] ${label} "${name}": ${text.length} chars — using vision (pages 1–${vEnd})`);
           try {
-            const pages = await pdfVisionFallback(file.buffer, numpages);
+            const pages = await pdfVisionFallback(file.buffer, numpages, label);
             if (pages.length === 0) throw new Error('no pages converted');
             console.log(`  [pdf-vision] ${label} "${name}": ${pages.length} page image(s)`);
             files.push({ originalname: name, label, type: 'pages', pages });
