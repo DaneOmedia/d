@@ -4,7 +4,7 @@ import UploadArea from './UploadArea';
 import LoanSelector from './LoanSelector';
 import Results from './Results';
 
-const INITIAL_LOAN = { loanType: 'Conventional', loanPurpose: 'Purchase', occupancy: 'Primary' };
+const INITIAL_LOAN = { loanType: 'Conventional', loanPurpose: 'Purchase', occupancy: 'Primary', programCategory: 'Agency' };
 
 export default function MainApp({ token, onLogout }) {
   const [files, setFiles] = useState([]);
@@ -12,7 +12,7 @@ export default function MainApp({ token, onLogout }) {
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [stage, setStage] = useState('upload'); // 'upload' | 'results'
+  const [stage, setStage] = useState('upload');
 
   async function handleAnalyze() {
     if (files.length === 0) return;
@@ -54,7 +54,6 @@ export default function MainApp({ token, onLogout }) {
     setStage('upload');
     setResult(null);
     setError('');
-    // Keep files loaded, just reset loan params
   }
 
   function handleReset() {
@@ -67,7 +66,6 @@ export default function MainApp({ token, onLogout }) {
 
   return (
     <div className="min-h-screen bg-slate-950">
-      {/* Header */}
       <header className="bg-slate-900 border-b border-slate-800 px-6 py-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -98,16 +96,11 @@ export default function MainApp({ token, onLogout }) {
         {stage === 'upload' && (
           <div className="space-y-6">
             <div className="grid lg:grid-cols-3 gap-6">
-              {/* Upload area — takes 2 cols */}
               <div className="lg:col-span-2 space-y-5">
                 <UploadArea files={files} setFiles={setFiles} />
               </div>
-
-              {/* Loan config — right column */}
               <div className="space-y-5">
                 <LoanSelector loan={loan} setLoan={setLoan} />
-
-                {/* Analyze button */}
                 <button
                   onClick={handleAnalyze}
                   disabled={files.length === 0 || loading}
@@ -130,11 +123,9 @@ export default function MainApp({ token, onLogout }) {
                     </>
                   )}
                 </button>
-
                 {files.length === 0 && (
                   <p className="text-slate-600 text-xs text-center">Upload at least one document to begin</p>
                 )}
-
                 {loading && (
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 text-center">
                     <p className="text-slate-400 text-sm">Claude is reading your documents...</p>
@@ -143,7 +134,6 @@ export default function MainApp({ token, onLogout }) {
                 )}
               </div>
             </div>
-
             {error && (
               <div className="bg-red-900/30 border border-red-800 text-red-300 rounded-xl px-5 py-4">
                 <p className="font-medium text-sm">Analysis Error</p>
@@ -155,7 +145,6 @@ export default function MainApp({ token, onLogout }) {
 
         {stage === 'results' && result && (
           <div className="space-y-6">
-            {/* Action bar */}
             <div className="flex items-center justify-between">
               <h2 className="text-white font-semibold text-lg">Underwriting Analysis</h2>
               <div className="flex gap-3">
@@ -179,7 +168,6 @@ export default function MainApp({ token, onLogout }) {
                 </button>
               </div>
             </div>
-
             <Results result={result} loan={loan} />
           </div>
         )}
