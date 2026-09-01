@@ -52,10 +52,10 @@ export default function LoanSelector({ loan, setLoan }) {
     <div className="space-y-4">
       <h2 className="text-white font-semibold">Loan Parameters</h2>
 
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+      <div className="bg-slate-900 border border-[#86051b]/30 rounded-2xl p-5 space-y-4">
         {/* Category toggle */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Documentation Type</label>
+          <label className="block text-xs font-medium text-[#ebe9d3]/60 mb-1.5">Documentation Type</label>
           <div className="flex bg-slate-800 rounded-lg p-1 gap-1">
             {[['Agency', 'Agency / Full Doc'], ['NonQM', 'Non-QM / Alt Doc']].map(([val, label]) => (
               <button
@@ -63,7 +63,7 @@ export default function LoanSelector({ loan, setLoan }) {
                 onClick={() => switchCategory(val)}
                 className={`flex-1 py-1.5 px-3 rounded-md text-xs font-semibold transition ${
                   loan.programCategory === val
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[#86051b] text-white'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
               >
@@ -75,7 +75,7 @@ export default function LoanSelector({ loan, setLoan }) {
 
         {/* Program / path selector */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">
+          <label className="block text-xs font-medium text-[#ebe9d3]/60 mb-1.5">
             {isNonQM ? 'Qualifying Path' : 'Loan Program'}
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -85,7 +85,7 @@ export default function LoanSelector({ loan, setLoan }) {
                 onClick={() => setLoan(prev => ({ ...prev, loanType: t }))}
                 className={`py-2 px-3 rounded-lg text-xs font-medium transition text-left leading-tight ${
                   loan.loanType === t
-                    ? 'bg-blue-600 text-white'
+                    ? 'bg-[#86051b] text-white'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
                 }`}
               >
@@ -97,11 +97,11 @@ export default function LoanSelector({ loan, setLoan }) {
 
         {/* Purpose */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Loan Purpose</label>
+          <label className="block text-xs font-medium text-[#ebe9d3]/60 mb-1.5">Loan Purpose</label>
           <select
             value={loan.loanPurpose}
             onChange={e => setLoan(prev => ({ ...prev, loanPurpose: e.target.value }))}
-            className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#86051b]"
           >
             {LOAN_PURPOSES.map(p => <option key={p}>{p}</option>)}
           </select>
@@ -109,11 +109,11 @@ export default function LoanSelector({ loan, setLoan }) {
 
         {/* Occupancy */}
         <div>
-          <label className="block text-xs font-medium text-slate-400 mb-1.5">Occupancy</label>
+          <label className="block text-xs font-medium text-[#ebe9d3]/60 mb-1.5">Occupancy</label>
           <select
             value={loan.occupancy}
             onChange={e => setLoan(prev => ({ ...prev, occupancy: e.target.value }))}
-            className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-[#86051b]"
           >
             {OCCUPANCY.map(o => <option key={o}>{o}</option>)}
           </select>

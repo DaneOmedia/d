@@ -21,8 +21,8 @@ function FileIcon({ type }) {
     );
   }
   return (
-    <div className="w-9 h-9 bg-blue-900/50 rounded-lg flex items-center justify-center flex-shrink-0">
-      <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <div className="w-9 h-9 bg-[#86051b]/30 rounded-lg flex items-center justify-center flex-shrink-0">
+      <svg className="w-5 h-5 text-[#ebe9d3]/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
     </div>
@@ -98,7 +98,7 @@ export default function UploadArea({ files, setFiles }) {
       <div className="flex items-center justify-between">
         <h2 className="text-white font-semibold">Upload Documents</h2>
         {files.length > 0 && (
-          <span className="text-xs text-slate-500">{files.length} file{files.length !== 1 ? 's' : ''} ready</span>
+          <span className="text-xs text-[#ebe9d3]/50">{files.length} file{files.length !== 1 ? 's' : ''} ready</span>
         )}
       </div>
 
@@ -110,8 +110,8 @@ export default function UploadArea({ files, setFiles }) {
         onClick={() => inputRef.current?.click()}
         className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
           dragging
-            ? 'border-blue-500 bg-blue-500/10'
-            : 'border-slate-700 hover:border-slate-500 bg-slate-900/50'
+            ? 'border-[#86051b] bg-[#86051b]/10'
+            : 'border-slate-700 hover:border-[#86051b]/50 bg-slate-900/50'
         }`}
       >
         <input
@@ -122,7 +122,7 @@ export default function UploadArea({ files, setFiles }) {
           className="hidden"
           onChange={handleChange}
         />
-        <svg className={`w-10 h-10 mx-auto mb-3 ${dragging ? 'text-blue-400' : 'text-slate-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className={`w-10 h-10 mx-auto mb-3 ${dragging ? 'text-[#86051b]' : 'text-slate-600'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.2}
             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
         </svg>
@@ -149,13 +149,13 @@ export default function UploadArea({ files, setFiles }) {
 
               <div className="flex-1 min-w-0">
                 <p className="text-white text-sm font-medium truncate">{f.file.name}</p>
-                <p className="text-slate-500 text-xs">{formatBytes(f.file.size)}</p>
+                <p className="text-[#ebe9d3]/40 text-xs">{formatBytes(f.file.size)}</p>
               </div>
 
               <select
                 value={f.label}
                 onChange={e => updateLabel(f.id, e.target.value)}
-                className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                className="bg-slate-800 border border-slate-700 text-slate-300 text-xs rounded-lg px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-[#86051b]"
               >
                 {DOC_LABELS.map(l => (
                   <option key={l} value={l}>{l}</option>

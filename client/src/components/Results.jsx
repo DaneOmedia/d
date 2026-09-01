@@ -42,7 +42,7 @@ function DataRow({ label, value, highlight }) {
   return (
     <div className="flex items-start justify-between py-2 border-b border-slate-800 last:border-0">
       <span className="text-slate-400 text-sm">{label}</span>
-      <span className={`text-sm font-medium ml-4 text-right ${highlight ? 'text-yellow-300' : 'text-slate-200'}`}>
+      <span className={`text-sm font-medium ml-4 text-right ${highlight ? 'text-amber-400' : 'text-slate-200'}`}>
         {value || '—'}
       </span>
     </div>
@@ -257,7 +257,7 @@ export default function Results({ result, loan }) {
           <span className="bg-slate-800 px-2.5 py-1 rounded-full">{loan.loanPurpose}</span>
           <span className="bg-slate-800 px-2.5 py-1 rounded-full">{loan.occupancy}</span>
           {result.qualifying_path && (
-            <span className="bg-blue-900/40 border border-blue-800 text-blue-300 px-2.5 py-1 rounded-full">{result.qualifying_path}</span>
+            <span className="bg-[#86051b]/20 border border-[#86051b]/50 text-[#ebe9d3] px-2.5 py-1 rounded-full">{result.qualifying_path}</span>
           )}
           {d.documents_reviewed?.length > 0 && (
             <span className="bg-slate-800 px-2.5 py-1 rounded-full">{d.documents_reviewed.length} docs reviewed</span>
