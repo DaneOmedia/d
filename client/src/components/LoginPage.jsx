@@ -27,7 +27,7 @@ export default function LoginPage({ onLogin }) {
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-5">
             <img
-              src="/OPTF_LOGO__2_.png"
+              src="/optf-logo.svg"
               alt="Option Funding"
               className="h-24 w-auto object-contain"
               onError={e => { e.target.style.display = 'none'; }}

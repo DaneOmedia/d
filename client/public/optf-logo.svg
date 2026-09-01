@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 80" fill="none">
+  <!-- Wordmark: Option Funding in brand colors -->
+  <text x="12" y="54" font-family="Georgia, 'Times New Roman', serif"
+        font-size="48" font-weight="700" fill="#86051b" letter-spacing="-1">OF</text>
+  <line x1="72" y1="14" x2="72" y2="66" stroke="#86051b" stroke-width="2" stroke-linecap="round"/>
+  <text x="82" y="36" font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="13" font-weight="600" fill="#ffffff" letter-spacing="1.5">OPTION</text>
+  <text x="82" y="56" font-family="'Helvetica Neue', Arial, sans-serif"
+        font-size="13" font-weight="400" fill="#ebe9d3" letter-spacing="1.5">FUNDING</text>
+</svg>
