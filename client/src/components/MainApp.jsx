@@ -34,14 +34,14 @@ export default function MainApp({ token, onLogout }) {
           'Content-Type': 'multipart/form-data',
           Authorization: `Bearer ${token}`,
         },
-        timeout: 120000,
+        timeout: 300000,
       });
 
       setResult(data);
       setStage('results');
     } catch (err) {
       if (err.code === 'ECONNABORTED') {
-        setError('Request timed out. Try with fewer or smaller documents.');
+        setError('Request timed out after 5 minutes. Try with fewer or smaller documents.');
       } else {
         setError(err.response?.data?.error || 'Analysis failed. Please try again.');
       }
