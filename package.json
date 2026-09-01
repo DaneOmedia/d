@@ -6,7 +6,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "postinstall": "cd server && npm ci && cd ../client && npm ci && npm run build",
+    "postinstall": "cd server && npm install && cd ../client && npm install && npm run build",
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
     "dev:client": "cd client && npm run dev",
