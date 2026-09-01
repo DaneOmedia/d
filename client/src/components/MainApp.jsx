@@ -70,7 +70,7 @@ export default function MainApp({ token, onLogout }) {
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
-              src="/optf-logo.svg"
+              src="/OPTF_LOGO__2_.png"
               alt="Option Funding"
               className="h-10 w-auto object-contain"
               onError={e => { e.target.style.display = 'none'; }}
